@@ -10,7 +10,7 @@ Analisador de armazenamento desktop, em português. A varredura lê metadados lo
 | Linux amd64 | Execute `sudo apt install ./diskmap-studio_0.1.0_amd64.deb` e abra DiskMap Studio pelo menu. |
 | Linux amd64 portátil | Extraia `diskmap-studio-0.1.0-linux-amd64.tar.gz` e execute `DiskMapStudio/DiskMapStudio`. |
 
-Os instaladores ficam em `artifacts/` na entrega local e na versão em rascunho no GitHub privado. O instalador Windows está sem assinatura Authenticode. A compilação Linux de distribuição usa Ubuntu 24.04. O pacote portátil também exige bibliotecas gráficas do sistema.
+Os instaladores ficam em `artifacts/` na entrega local e na versão em rascunho no GitHub privado. O instalador Windows está sem assinatura Authenticode. A compilação Linux de distribuição usa Ubuntu 24.04. Os binários Linux deste release exigem glibc 2.38 ou superior e bibliotecas gráficas do sistema.
 
 ## Uso
 

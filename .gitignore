@@ -10,3 +10,5 @@ artifacts/
 site/downloads/
 
 *.diskmap-license
+
+.hallmark/
