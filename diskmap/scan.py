@@ -100,7 +100,7 @@ def scan(database, root, cancelled, report, *, max_entries=MAX_ENTRIES):
     mount_paths = mounts()
     index = Path(os.path.abspath(database))
     internal_files = {index.with_name(index.name + suffix) for suffix in ("", "-wal", "-shm", "-journal")}
-    internal_files.add(index.with_suffix(".lock"))
+    internal_files.update((index.with_suffix(".lock"), index.with_name("pro.diskmap-license")))
     omitted = Counter()
     pending = []
     totals = []

@@ -5,6 +5,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
 from diskmap.store import initialize
+
 from diskmap.ui import Window
 
 
@@ -37,6 +38,9 @@ def test_window_scan_tree_filter_history(tmp_path):
         window.extension.setText("mkv")
         wait_until(lambda: window.file_table.rowCount() == 1 and window.job is None)
         assert window.file_table.item(0, 0).text().endswith("video.mkv")
+        assert not window.save_snapshot.isEnabled()
+        window.license_holder = "Pessoa de teste"
+        window.update_edition()
         window.save_current()
         assert window.snapshots.rowCount() == 1
     finally:

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://diskmap.franklem.com/sitemap.xml

@@ -1,4 +1,5 @@
 """DiskMap Studio desktop interface and worker coordination."""
+import html
 import json
 import time
 from contextlib import closing
@@ -6,16 +7,17 @@ from datetime import datetime
 from pathlib import Path
 from threading import Event
 
-from PySide6.QtCore import QStorageInfo, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QIODevice, QSaveFile, QStorageInfo, QThread, QTimer, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QFileDialog, QFrame, QHeaderView,
     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMainWindow, QMessageBox,
-    QProgressBar, QPushButton, QSplitter, QTableWidget, QTableWidgetItem,
+    QProgressBar, QPushButton, QSplitter, QStackedWidget, QTableWidget, QTableWidgetItem,
     QTabWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
 from .export import export
+from .license import read_license, verify
 from .scan import scan
 from .store import (
     FileFilter, connect, differences, directory, discard_unsaved, display_path, files,
@@ -84,12 +86,16 @@ def table(headers):
     return widget
 
 
+def plain_tip(text):
+    return "<p>" + html.escape(str(text)) + "</p>"
+
+
 def fill_table(widget, rows):
     widget.setRowCount(len(rows))
     for index, row in enumerate(rows):
         for column, value in enumerate(row):
             item = QTableWidgetItem(str(value))
-            item.setToolTip(value if isinstance(value, str) else str(value))
+            item.setToolTip(plain_tip(value))
             widget.setItem(index, column, item)
 
 
@@ -98,6 +104,11 @@ class Window(QMainWindow):
         super().__init__()
         self.database = database
         self.result = None
+        self.license_path = database.with_name("pro.diskmap-license")
+        try:
+            self.license_holder = verify(read_license(self.license_path))
+        except (OSError, ValueError):
+            self.license_holder = ""
         self.job = None
         self.job_kind = ""
         self.closing = False
@@ -111,7 +122,7 @@ class Window(QMainWindow):
         self.setMinimumSize(720, 640)
         self.resize(1140, 820)
         self.build()
-        self.load_history()
+        self.update_edition()
         self.refresh_controls()
 
     def build(self):
@@ -152,7 +163,8 @@ class Window(QMainWindow):
         self.tree.setAlternatingRowColors(True)
         self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.tree.itemExpanded.connect(self.populate_tree)
+        self.tree.itemExpanded.connect(self.expand_tree)
+        self.tree.itemCollapsed.connect(self.collapse_tree)
         self.tree.currentItemChanged.connect(self.tree_selected)
         self.tree.itemActivated.connect(self.activate_tree_item)
         tree_layout.addWidget(self.tree)
@@ -253,7 +265,8 @@ class Window(QMainWindow):
         panel = QWidget()
         layout = QVBoxLayout(panel)
         controls = QHBoxLayout()
-        controls.addWidget(label("Histórico local · prévia Pro"), 1)
+        self.pro_status = label("Histórico local")
+        controls.addWidget(self.pro_status, 1)
         self.save_snapshot = button("Salvar snapshot", self.save_current)
         self.open_snapshot = button("Abrir", self.open_saved)
         self.compare_snapshots = button("Comparar seleção", self.start_comparison)
@@ -281,7 +294,47 @@ class Window(QMainWindow):
         paging.addWidget(self.diff_info, 1)
         paging.addWidget(self.next_diff)
         layout.addLayout(paging)
-        self.tabs.addTab(panel, "Histórico Pro")
+        self.editions = QStackedWidget()
+        locked = QWidget()
+        locked_layout = QVBoxLayout(locked)
+        locked_layout.addStretch()
+        locked_layout.addWidget(label("Histórico de snapshots", "section"))
+        explanation = label("Com o Pro, salve varreduras e compare mudanças sem sair do computador.")
+        explanation.setWordWrap(True)
+        locked_layout.addWidget(explanation)
+        activate = button("Importar licença Pro", self.activate_license, primary=True)
+        locked_layout.addWidget(activate, alignment=Qt.AlignmentFlag.AlignLeft)
+        locked_layout.addStretch()
+        self.editions.addWidget(locked)
+        self.editions.addWidget(panel)
+        self.tabs.addTab(self.editions, "Histórico Pro")
+
+    def update_edition(self):
+        if self.license_holder:
+            self.pro_status.setToolTip(plain_tip(f"Licença Pro de {self.license_holder}"))
+            self.editions.setCurrentIndex(1)
+            self.load_history()
+
+    def activate_license(self):
+        source, _ = QFileDialog.getOpenFileName(
+            self, "Importar licença Pro", "", "Licença DiskMap (*.diskmap-license);;Todos os arquivos (*)"
+        )
+        if not source:
+            return
+        try:
+            blob = read_license(Path(source))
+            holder = verify(blob)
+            target = QSaveFile(str(self.license_path))
+            if not target.open(QIODevice.OpenModeFlag.WriteOnly):
+                raise OSError(target.errorString())
+            if target.write(blob) != len(blob) or not target.commit():
+                raise OSError(target.errorString())
+        except (OSError, ValueError) as error:
+            self.show_error(str(error))
+            return
+        self.license_holder = holder
+        self.update_edition()
+        self.status.setText("Licença Pro ativada neste computador.")
 
     def focus_search(self):
         self.tabs.setCurrentIndex(0)
@@ -358,7 +411,7 @@ class Window(QMainWindow):
     def scan_progress(self, scanned, count, size, path):
         if self.job and not self.job.stop.is_set():
             self.status.setText(f"{integer(scanned)} itens lidos · {integer(count)} arquivos · {readable_size(size)}")
-            self.status.setToolTip(path)
+            self.status.setToolTip(plain_tip(path))
 
     def display_result(self, result):
         self.result = result
@@ -378,35 +431,55 @@ class Window(QMainWindow):
     def node_item(self, row):
         item = QTreeWidgetItem([row["name"], readable_size(row["bytes"])])
         item.setData(0, ROLE, (row["id"], row["directory"], row["bytes"], row["name"]))
-        item.setToolTip(0, display_path(row["path"]))
+        item.setToolTip(0, plain_tip(display_path(row["path"])))
         item.setToolTip(1, f"{row['bytes']} bytes")
         if row["directory"]:
             item.addChild(QTreeWidgetItem(["Carregar…"]))
         return item
 
-    def populate_tree(self, item, after=None):
-        if not item.data(0, ROLE):
-            return
-        if after is None and (not item.childCount() or item.child(0).data(0, ROLE) is not None):
-            return
-        if after is None:
+    def expand_tree(self, item):
+        parent = item.parent()
+        if parent is not None:
+            for index in range(parent.childCount()):
+                sibling = parent.child(index)
+                if sibling is not item and sibling.isExpanded():
+                    sibling.setExpanded(False)
+        self.populate_tree(item, [None])
+
+    def collapse_tree(self, item):
+        if item.data(0, ROLE):
             item.takeChildren()
+            item.addChild(QTreeWidgetItem(["Carregar…"]))
+            item.setData(0, ROLE + 2, None)
+
+    def populate_tree(self, item, pages):
+        node = item.data(0, ROLE)
+        if not node:
+            return
+        item.takeChildren()
+        item.setData(0, ROLE + 2, pages)
         with closing(connect(self.database)) as db:
-            rows = directory(db, self.result["id"], item.data(0, ROLE)[0], after, PAGE + 1)
+            rows = directory(db, self.result["id"], node[0], pages[-1], PAGE + 1)
+        if len(pages) > 1:
+            previous = QTreeWidgetItem(["Página anterior…"])
+            previous.setData(0, ROLE + 1, -1)
+            item.addChild(previous)
         item.addChildren([self.node_item(row) for row in rows[:PAGE]])
         if len(rows) > PAGE:
-            more = QTreeWidgetItem(["Carregar mais itens…"])
+            more = QTreeWidgetItem(["Próxima página…"])
             more.setData(0, ROLE + 1, (rows[PAGE - 1]["bytes"], rows[PAGE - 1]["id"]))
             item.addChild(more)
 
     def activate_tree_item(self, item, _column):
         after = item.data(0, ROLE + 1)
-        if after is not None:
-            parent = item.parent()
-            index = parent.indexOfChild(item)
-            parent.removeChild(item)
-            self.populate_tree(parent, after)
-            self.tree.setCurrentItem(parent.child(index))
+        if after is None:
+            return
+        parent = item.parent()
+        pages = parent.data(0, ROLE + 2)
+        pages = pages[:-1] if after == -1 else [*pages, after]
+        self.tree.setCurrentItem(parent)
+        self.populate_tree(parent, pages)
+        self.tree.setCurrentItem(parent.child(int(len(pages) > 1)))
 
     def tree_selected(self, item, _previous):
         if item is None or not item.data(0, ROLE):
@@ -427,6 +500,8 @@ class Window(QMainWindow):
         if current is None or not current.data(0, ROLE):
             return
         current.setExpanded(True)
+        if len(current.data(0, ROLE + 2) or []) > 1:
+            self.populate_tree(current, [None])
         for index in range(min(current.childCount(), PAGE)):
             child = current.child(index)
             if child.data(0, ROLE) and child.data(0, ROLE)[0] == node_id:
@@ -515,7 +590,7 @@ class Window(QMainWindow):
         self.refresh_controls()
 
     def save_current(self):
-        if keep_snapshot(self.database, self.result["id"]):
+        if self.license_holder and keep_snapshot(self.database, self.result["id"]):
             with closing(connect(self.database)) as db:
                 self.result = db.execute("SELECT * FROM scans WHERE id=?", (self.result["id"],)).fetchone()
             self.history_offset = 0
@@ -583,7 +658,7 @@ class Window(QMainWindow):
         self.html_button.setEnabled(idle and bool(self.result))
         self.previous_files.setEnabled(idle and not self.search_timer.isActive() and len(self.file_pages) > 1)
         self.next_files.setEnabled(idle and not self.search_timer.isActive() and self.file_cursor is not None)
-        self.save_snapshot.setEnabled(idle and bool(self.result) and self.result["state"] == "complete" and not self.result["saved"])
+        self.save_snapshot.setEnabled(idle and bool(self.license_holder) and bool(self.result) and self.result["state"] == "complete" and not self.result["saved"])
         selected = self.selected_snapshots()
         self.open_snapshot.setEnabled(idle and len(selected) == 1)
         self.compare_snapshots.setEnabled(idle and len(selected) == 2 and selected[0]["root"] == selected[1]["root"])

@@ -2,7 +2,7 @@
 
 1. Criar motor de varredura em lotes com `pathlib`, `os.scandir`, workers Qt e índice local SQLite. Ler metadados de arquivos regulares. Não seguir links ou cruzar montagens. Registrar omissões, progresso, cancelamento e limites.
 2. Entregar navegação entre unidades e pastas, árvore, treemap proporcional com Qt e Squarify, maiores arquivos, busca e filtro por extensão. Usar controles redimensionáveis, foco visível, atalhos e alternativas textuais ao gráfico.
-3. Persistir snapshots explícitos e comparar duas varreduras da mesma raiz por caminho relativo. Exportar os arquivos do resultado filtrado em CSV e HTML. Disponibilizar o histórico como prévia Pro offline durante o MVP.
+3. Persistir snapshots explícitos e comparar duas varreduras da mesma raiz por caminho relativo. Exportar os arquivos do resultado filtrado em CSV e HTML. Liberar o histórico Pro mediante licença Ed25519 verificável offline.
 4. Criar landing estática em português com metadados SEO e captura de um cenário sintético executado no app. Preparar a estrutura para o Business Web Hosting da Hostinger no subdomínio proposto `diskmap.franklem.com`. Publicação sujeita à autorização.
 5. Verificar cenários essenciais com pytest e abrir o pacote congelado. Empacotar Debian amd64, Linux portátil e instalador nativo Windows x64 no GitHub Actions. Versionar no GitHub de Franklin com visibilidade privada inicial.
 

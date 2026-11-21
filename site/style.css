@@ -1,0 +1,68 @@
+/* Hallmark · shape: product screenshot · genre: modern-minimal · theme: custom graphite and orange · v2.0.0 */
+/* Critique: the real interface carries the hero. Supporting sections use text and horizontal rules. */
+:root {
+  color-scheme: dark;
+  --ink: #fff3e8;
+  --muted: #c7b8ab;
+  --paper: #171513;
+  --surface: #211d19;
+  --line: #504236;
+  --accent: #ffad69;
+  --accent-hover: #ffc599;
+  --on-accent: #241508;
+  --body: system-ui, sans-serif;
+  --content: 78rem;
+  --gutter: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; overflow-x: clip; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); line-height: 1.5; }
+a { color: inherit; }
+a:active { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+img { display: block; max-width: 100%; height: auto; }
+p { color: var(--muted); }
+h1, h2 { overflow-wrap: break-word; text-wrap: balance; min-width: 0; margin: 0; line-height: 1.05; }
+.wrap { width: min(100% - 2 * var(--gutter), var(--content)); margin-inline: auto; }
+.masthead { min-height: 4.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); }
+.masthead a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; }
+.brand { gap: .65rem; font-weight: 720; }
+.brand img { border-radius: .15rem; }
+nav { display: flex; gap: clamp(.75rem, 3vw, 2rem); color: var(--muted); font-size: .9375rem; }
+nav a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: .3em; }
+
+.hero { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); padding-block: clamp(2.5rem, 6.5vw, 6rem); }
+.hero h1 { font-size: clamp(3rem, 6.65vw, 6rem); letter-spacing: -.07em; font-weight: 770; }
+.hero p { max-width: 33ch; font-size: clamp(1rem, 1.55vw, 1.2rem); margin: 1.4rem 0 1.8rem; }
+.action { display: inline-flex; align-items: center; min-height: 3rem; border-radius: .35rem; padding: .65rem 1.1rem; background: var(--accent); color: var(--on-accent); text-decoration: none; font-weight: 720; }
+.action:hover { background: var(--accent-hover); }
+.action:active { background: var(--accent-hover); color: var(--on-accent); }
+figure { margin: 0; min-width: 0; }
+figure img { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: .5rem; }
+figcaption { color: var(--muted); font-size: .8125rem; margin-top: .6rem; }
+
+.section { padding-block: clamp(2.5rem, 6vw, 5rem); border-top: 1px solid var(--line); }
+.section h2 { font-size: clamp(1.8rem, 4vw, 3rem); letter-spacing: -.045em; }
+.feature-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(1.25rem, 4vw, 3.5rem); margin: 2rem 0 0; }
+.feature-list dt { color: var(--accent); font-size: 1.1rem; font-weight: 720; }
+.feature-list dd { margin: .55rem 0 0; color: var(--muted); max-width: 32ch; }
+.downloads { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1fr); align-items: start; gap: 2rem; }
+.downloads ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.downloads a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.4rem; padding: .55rem .25rem; border-bottom: 1px solid var(--line); font-weight: 700; text-decoration: none; }
+.downloads a:hover { color: var(--accent); }
+.downloads small { color: var(--muted); font-weight: 500; text-align: end; }
+footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; padding-block: 1.3rem 2rem; color: var(--muted); border-top: 1px solid var(--line); font-size: .9rem; }
+
+@media (max-width: 55rem) {
+  .hero { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .hero h1 { max-width: 13ch; }
+  .hero figure { width: min(100%, 44rem); }
+}
+@media (max-width: 39rem) {
+  .feature-list, .downloads { grid-template-columns: minmax(0, 1fr); }
+  .feature-list { gap: 1.4rem; }
+}
+@media (max-width: 24rem) {
+  .masthead .nav-features { display: none; }
+}

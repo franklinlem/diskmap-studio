@@ -1,9 +1,13 @@
 name: Testes e instaladores
 
 on:
-  push:
-    branches: [main]
+  pull_request:
   workflow_dispatch:
+    inputs:
+      draft_tag:
+        description: Tag de uma versão em rascunho para receber os instaladores
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -11,6 +15,8 @@ permissions:
 jobs:
   linux:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -25,14 +31,19 @@ jobs:
       - run: python -m pytest -q
       - name: Pacote Debian e distribuição portátil
         run: packaging/linux.sh "$(python -c 'from diskmap import __version__; print(__version__)')"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: diskmap-linux-amd64
-          path: artifacts/*
-          if-no-files-found: error
+      - name: Anexar pacotes ao rascunho
+        if: inputs.draft_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT_TAG: ${{ inputs.draft_tag }}
+        run: |
+          test "$(gh release view "$DRAFT_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$DRAFT_TAG" artifacts/*.deb artifacts/*.tar.gz
 
   windows:
     runs-on: windows-2025
+    permissions:
+      contents: write
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -72,8 +83,14 @@ jobs:
           $process = Start-Process (Join-Path $target DiskMapStudio.exe) -ArgumentList '--smoke' -PassThru
           if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Smoke excedeu 30 s' }
           if ($process.ExitCode -ne 0) { exit $process.ExitCode }
-      - uses: actions/upload-artifact@v4
-        with:
-          name: diskmap-windows-x64
-          path: artifacts/*-setup.exe
-          if-no-files-found: error
+      - name: Anexar instalador ao rascunho
+        if: inputs.draft_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT_TAG: ${{ inputs.draft_tag }}
+        shell: pwsh
+        run: |
+          $draft = gh release view $env:DRAFT_TAG --json isDraft --jq .isDraft
+          if ($LASTEXITCODE -ne 0 -or $draft -ne 'true') { throw 'A versão precisa ser um rascunho' }
+          $installer = (Get-ChildItem artifacts\*-setup.exe | Select-Object -First 1).FullName
+          gh release upload $env:DRAFT_TAG $installer

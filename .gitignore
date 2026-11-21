@@ -6,3 +6,7 @@ build/
 dist/
 artifacts/
 *.spec
+
+site/downloads/
+
+*.diskmap-license

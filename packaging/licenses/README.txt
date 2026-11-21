@@ -12,3 +12,6 @@ O executável usa o bootloader PyInstaller sob a exceção à GPL.
 https://pyinstaller.org/en/stable/license.html
 
 Aplicação DiskMap Studio © Franklin Leandro Martins.
+
+Cryptography 46.0.3 usa Apache 2.0 ou BSD, com textos no diretório
+licenses/cryptography. https://github.com/pyca/cryptography/tree/46.0.3
