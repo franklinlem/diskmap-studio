@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=DiskMap Studio
+Comment=Análise de armazenamento offline
+Exec=/opt/diskmap-studio/DiskMapStudio
+Icon=diskmap-studio
+Type=Application
+Categories=Utility;FileTools;
+Terminal=false
